@@ -1,4 +1,5 @@
 ﻿#include "../exercise.h"
+#include <cstring>
 
 // READ: 类模板 <https://zh.cppreference.com/w/cpp/language/class_template>
 
@@ -10,8 +11,12 @@ struct Tensor4D {
     Tensor4D(unsigned int const shape_[4], T const *data_) {
         unsigned int size = 1;
         // TODO: 填入正确的 shape 并计算 size
+        for (int i = 0; i < 4; i++) {
+            shape[i] = shape_[i];
+            size *= shape_[i];
+        }
         data = new T[size];
-        std::memcpy(data, data_, size * sizeof(T));
+        memcpy(data, data_, size * sizeof(T));
     }
     ~Tensor4D() {
         delete[] data;
@@ -28,6 +33,55 @@ struct Tensor4D {
     // 则 `this` 与 `others` 相加时，3 个形状为 `[1, 2, 1, 4]` 的子张量各自与 `others` 对应项相加。
     Tensor4D &operator+=(Tensor4D const &others) {
         // TODO: 实现单向广播的加法
+        int size_1 = 1;
+        int size_2 = 1;
+        for (int i = 0; i < 4; i++) {
+            size_1 *= this->shape[i]; 
+            size_2 *= others.shape[i]; 
+        }
+
+        if (others.shape[1] == 1 && others.shape[2] == 1 && others.shape[3] == 1) {
+            for (int i = 0; i < size_1; i++) {
+                this->data[i] += others.data[0];
+            }
+        }
+        else if (this->shape[3] != others.shape[3] && others.shape[3] == 1) {
+            for (int i = 0; i < this->shape[1] * this->shape[2]; i++) {
+                int m = i * this->shape[3];
+                int n = i * others.shape[3];
+                for (int j = 0; j < this->shape[3]; j++) { // shape[3]: 4
+                    this->data[m + j] += others.data[n];
+                }
+            }
+        }
+        else if (this->shape[2] != others.shape[2] && others.shape[2] == 1) {
+            for (int i = 0; i < this->shape[1]; i++) {  //shape[1]: 2
+                int m = i * this->shape[2] * this->shape[3];
+                int n = i * others.shape[2] * this->shape[3];
+                for (int j = 0; j < this->shape[2]; j++) { //shape[2]: 3
+                    for (int p = 0; p < this->shape[3]; p++) {
+                        this->data[m + p] += others.data[n + p];
+                    }
+                    m += others.shape[3];
+                }
+            }
+        }
+        else if (this->shape[1] != others.shape[1] && others.shape[1] == 1) {
+            for (int i = 0; i < this->shape[1]; i++) {
+                int m = i * this->shape[2] * this->shape[3];
+                int n = 0;
+                for (int j = 0; j < this->shape[2] * this->shape[3]; j++) {
+                    this->data[m + j] += others.data[n + j];
+                }
+            }
+        }
+        else if (this->shape[0] == others.shape[0] && this->shape[1] == others.shape[1] && \
+                 this->shape[2] == others.shape[2] && this->shape[3] == others.shape[3]) {
+            for (int i = 0; i < size_1; i++) {
+                this->data[i] += others.data[i];
+            }
+        }
+
         return *this;
     }
 };
